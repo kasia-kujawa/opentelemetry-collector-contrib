@@ -42,6 +42,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/skywalkingexporter v0.72.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.72.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/sumologicexporter v0.72.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/syslogexporter v0.72.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/tanzuobservabilityexporter v0.72.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/tencentcloudlogserviceexporter v0.72.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/zipkinexporter v0.72.0
@@ -1045,3 +1046,5 @@ exclude github.com/DataDog/agent-payload/v5 v5.0.59
 
 // see https://github.com/mattn/go-ieproxy/issues/45
 replace github.com/mattn/go-ieproxy => github.com/mattn/go-ieproxy v0.0.1
+
+replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/syslogexporter => ./exporter/syslogexporter

@@ -56,6 +56,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/skywalkingexporter v0.72.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.72.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/sumologicexporter v0.72.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/syslogexporter v0.72.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/tanzuobservabilityexporter v0.72.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/tencentcloudlogserviceexporter v0.72.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/zipkinexporter v0.72.0 // indirect
@@ -1039,3 +1040,5 @@ replace github.com/open-telemetry/opentelemetry-collector-contrib/internal/filte
 retract v0.65.0
 
 replace github.com/open-telemetry/opentelemetry-collector-contrib/receiver/sshcheckreceiver => ../../receiver/sshcheckreceiver
+
+replace github.com/open-telemetry/opentelemetry-collector-contrib/exporter/syslogexporter => ../../exporter/syslogexporter
