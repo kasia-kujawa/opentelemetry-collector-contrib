@@ -27,6 +27,8 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/sqlqueryreceiver/internal/observability"
 )
 
 type logsReceiver struct {
@@ -124,6 +126,7 @@ func (receiver *logsReceiver) collect() {
 			if err != nil {
 				receiver.settings.Logger.Error("Error collecting logs", zap.Error(err), zap.Stringer("scraper", queryReceiver.ID()))
 			}
+			receiver.recordMetrics(logs, queryReceiver.id.String())
 			logsChannel <- logs
 		}(queryReceiver)
 	}
@@ -135,6 +138,17 @@ func (receiver *logsReceiver) collect() {
 	}
 	if allLogs.LogRecordCount() > 0 {
 		receiver.nextConsumer.ConsumeLogs(context.Background(), allLogs)
+	}
+}
+
+func (receiver *logsReceiver) recordMetrics(collectedLogs plog.Logs, id string) {
+	logs_count := collectedLogs.LogRecordCount()
+	if err := observability.RecordCollectedLogs(int64(logs_count), id); err != nil {
+		receiver.settings.Logger.Debug("error for recording metric for number of collected metrics", zap.Error(err))
+	}
+
+	if err := observability.RecordCollectedLogsAccumulated(int64(logs_count), id); err != nil {
+		receiver.settings.Logger.Debug("error for recording metric for accumulated number of collected metrics", zap.Error(err))
 	}
 }
 
