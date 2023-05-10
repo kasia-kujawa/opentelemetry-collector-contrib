@@ -24,8 +24,7 @@ import (
 
 func init() {
 	err := view.Register(
-		viewCollectedLogs,
-		viewCollectedAccumulated,
+		viewCollectedTotal,
 	)
 	if err != nil {
 		fmt.Printf("Failed to register sqlquery receiver's views: %v\n", err)
@@ -33,23 +32,14 @@ func init() {
 }
 
 var (
-	mLogsCollected                = stats.Int64("receiver/logs/collected", "Number of logs collected in the collection interval", "")
-	mLogsCollectedLogsAccumulated = stats.Int64("receiver/logs/collected_accumulated", "Number of logs collected", "")
-	receiverKey, _                = tag.NewKey("receiver") // nolint:errcheck
+	mLogsCollectedLogs = stats.Int64("receiver/collected/log/records", "Number of collected logs", "")
+	receiverKey, _     = tag.NewKey("receiver") // nolint:errcheck
 )
 
-var viewCollectedLogs = &view.View{
-	Name:        mLogsCollected.Name(),
-	Description: mLogsCollected.Description(),
-	Measure:     mLogsCollected,
-	TagKeys:     []tag.Key{receiverKey},
-	Aggregation: view.LastValue(),
-}
-
-var viewCollectedAccumulated = &view.View{
-	Name:        mLogsCollectedLogsAccumulated.Name(),
-	Description: mLogsCollectedLogsAccumulated.Description(),
-	Measure:     mLogsCollectedLogsAccumulated,
+var viewCollectedTotal = &view.View{
+	Name:        mLogsCollectedLogs.Name(),
+	Description: mLogsCollectedLogs.Description(),
+	Measure:     mLogsCollectedLogs,
 	TagKeys:     []tag.Key{receiverKey},
 	Aggregation: view.Sum(),
 }
@@ -60,16 +50,6 @@ func RecordCollectedLogs(collectedLogs int64, receiver string) error {
 		[]tag.Mutator{
 			tag.Insert(receiverKey, receiver),
 		},
-		mLogsCollected.M(collectedLogs),
-	)
-}
-
-func RecordCollectedLogsAccumulated(collectedLogs int64, receiver string) error {
-	return stats.RecordWithTags(
-		context.Background(),
-		[]tag.Mutator{
-			tag.Insert(receiverKey, receiver),
-		},
-		mLogsCollectedLogsAccumulated.M(collectedLogs),
+		mLogsCollectedLogs.M(collectedLogs),
 	)
 }

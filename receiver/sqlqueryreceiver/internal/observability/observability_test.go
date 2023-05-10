@@ -99,13 +99,8 @@ func TestMetrics(t *testing.T) {
 	}
 	tests := []testCase{
 		{
-			name:       "receiver/logs/collected",
+			name:       "receiver/collected/log/records",
 			recordFunc: "RecordCollectedLogs",
-			value:      3,
-		},
-		{
-			name:       "receiver/logs/collected_accumulated",
-			recordFunc: "RecordCollectedLogsAccumulated",
 			value:      10,
 		},
 	}
@@ -121,8 +116,6 @@ func TestMetrics(t *testing.T) {
 		switch tt.recordFunc {
 		case "RecordCollectedLogs":
 			require.NoError(t, RecordCollectedLogs(tt.value, receiver))
-		case "RecordCollectedLogsAccumulated":
-			require.NoError(t, RecordCollectedLogsAccumulated(tt.value, receiver))
 		}
 	}
 
@@ -150,11 +143,8 @@ func TestMetrics(t *testing.T) {
 			require.Len(t, d.TimeSeries, 1)
 			require.Len(t, d.TimeSeries[0].Points, 1)
 			assert.Equal(t, d.TimeSeries[0].Points[0].Value, tt.value)
-
 			require.Len(t, d.TimeSeries[0].LabelValues, 1)
-
 			require.True(t, d.TimeSeries[0].LabelValues[0].Present)
-
 			assert.Equal(t, d.TimeSeries[0].LabelValues[0].Value, receiver)
 		})
 	}

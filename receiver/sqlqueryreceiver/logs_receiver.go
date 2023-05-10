@@ -126,7 +126,11 @@ func (receiver *logsReceiver) collect() {
 			if err != nil {
 				receiver.settings.Logger.Error("Error collecting logs", zap.Error(err), zap.Stringer("scraper", queryReceiver.ID()))
 			}
-			receiver.recordMetrics(logs, queryReceiver.id.String())
+
+			if err := observability.RecordCollectedLogs(int64(logs.LogRecordCount()), queryReceiver.id.String()); err != nil {
+				receiver.settings.Logger.Debug("error for recording metric for number of collected logs", zap.Error(err))
+			}
+
 			logsChannel <- logs
 		}(queryReceiver)
 	}
@@ -138,17 +142,6 @@ func (receiver *logsReceiver) collect() {
 	}
 	if allLogs.LogRecordCount() > 0 {
 		receiver.nextConsumer.ConsumeLogs(context.Background(), allLogs)
-	}
-}
-
-func (receiver *logsReceiver) recordMetrics(collectedLogs plog.Logs, id string) {
-	logs_count := collectedLogs.LogRecordCount()
-	if err := observability.RecordCollectedLogs(int64(logs_count), id); err != nil {
-		receiver.settings.Logger.Debug("error for recording metric for number of collected metrics", zap.Error(err))
-	}
-
-	if err := observability.RecordCollectedLogsAccumulated(int64(logs_count), id); err != nil {
-		receiver.settings.Logger.Debug("error for recording metric for accumulated number of collected metrics", zap.Error(err))
 	}
 }
 
