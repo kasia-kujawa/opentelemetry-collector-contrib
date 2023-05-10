@@ -98,9 +98,17 @@ func (receiver *logsReceiver) Start(ctx context.Context, host component.Host) er
 	for _, queryReceiver := range receiver.queryReceivers {
 		err := queryReceiver.start()
 		if err != nil {
+			if err := observability.RecordErrorCount(observability.StartError, receiver.id.String(), queryReceiver.ID()); err != nil {
+				receiver.settings.Logger.Debug("error recording metric for errors count", zap.Error(err))
+			}
 			return err
 		}
+
+		if err := observability.RecordNoErrorCount(observability.StartError, receiver.id.String(), queryReceiver.ID()); err != nil {
+			receiver.settings.Logger.Debug("error recording metric for errors count", zap.Error(err))
+		}
 	}
+
 	receiver.startCollecting()
 	receiver.settings.Logger.Debug("started.")
 	return nil
@@ -128,6 +136,13 @@ func (receiver *logsReceiver) collect() {
 			logs, err := queryReceiver.collect(context.Background())
 			if err != nil {
 				receiver.settings.Logger.Error("Error collecting logs", zap.Error(err), zap.String("query", queryReceiver.ID()))
+				if err := observability.RecordErrorCount(observability.CollectError, receiver.id.String(), queryReceiver.ID()); err != nil {
+					receiver.settings.Logger.Debug("error for recording metric for errors count", zap.Error(err))
+				}
+			}
+
+			if err := observability.RecordNoErrorCount(observability.CollectError, receiver.id.String(), queryReceiver.ID()); err != nil {
+				receiver.settings.Logger.Debug("error for recording metric for errors count", zap.Error(err))
 			}
 
 			if err := observability.RecordAcceptedLogs(int64(logs.LogRecordCount()), receiver.id.String(), queryReceiver.id); err != nil {
