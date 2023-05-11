@@ -42,6 +42,8 @@ type logsReceiver struct {
 	isStarted                bool
 	collectionIntervalTicker *time.Ticker
 	shutdownRequested        chan struct{}
+
+	id component.ID
 }
 
 func newLogsReceiver(
@@ -60,6 +62,7 @@ func newLogsReceiver(
 		createClient:      createClient,
 		nextConsumer:      nextConsumer,
 		shutdownRequested: make(chan struct{}),
+		id:                settings.ID,
 	}
 
 	receiver.createQueryReceivers()
@@ -72,7 +75,7 @@ func (receiver *logsReceiver) createQueryReceivers() {
 		if len(query.Logs) == 0 {
 			continue
 		}
-		id := component.NewIDWithName("sqlqueryreceiver", fmt.Sprintf("query-%d: %s", i, query.SQL))
+		id := fmt.Sprintf("query-%d: %s", i, query.SQL)
 		queryReceiver := newLogsQueryReceiver(
 			id,
 			query,
@@ -124,11 +127,11 @@ func (receiver *logsReceiver) collect() {
 		go func(queryReceiver *logsQueryReceiver) {
 			logs, err := queryReceiver.collect(context.Background())
 			if err != nil {
-				receiver.settings.Logger.Error("Error collecting logs", zap.Error(err), zap.Stringer("scraper", queryReceiver.ID()))
+				receiver.settings.Logger.Error("Error collecting logs", zap.Error(err), zap.String("query", queryReceiver.ID()))
 			}
 
-			if err := observability.RecordCollectedLogs(int64(logs.LogRecordCount()), queryReceiver.id.String()); err != nil {
-				receiver.settings.Logger.Debug("error for recording metric for number of collected logs", zap.Error(err))
+			if err := observability.RecordAcceptedLogs(int64(logs.LogRecordCount()), receiver.id.String(), queryReceiver.id); err != nil {
+				receiver.settings.Logger.Debug("error recording metric for number of collected logs", zap.Error(err))
 			}
 
 			logsChannel <- logs
@@ -169,7 +172,7 @@ func (receiver *logsReceiver) stopCollecting() {
 }
 
 type logsQueryReceiver struct {
-	id           component.ID
+	id           string
 	query        Query
 	createDb     dbProviderFunc
 	createClient clientProviderFunc
@@ -181,7 +184,7 @@ type logsQueryReceiver struct {
 }
 
 func newLogsQueryReceiver(
-	id component.ID,
+	id string,
 	query Query,
 	dbProviderFunc dbProviderFunc,
 	clientProviderFunc clientProviderFunc,
@@ -198,7 +201,7 @@ func newLogsQueryReceiver(
 	return queryReceiver
 }
 
-func (queryReceiver *logsQueryReceiver) ID() component.ID {
+func (queryReceiver *logsQueryReceiver) ID() string {
 	return queryReceiver.id
 }
 

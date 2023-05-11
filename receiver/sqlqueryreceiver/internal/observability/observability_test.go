@@ -85,12 +85,10 @@ func metricReader(chData chan []*metricdata.Metric, fail chan struct{}, count in
 	fail <- struct{}{}
 }
 
-// NOTE:
-// This test can only be run with count 1 because of static
-// metricproducer.GlobalManager() used in metricexport.NewReader().
 func TestMetrics(t *testing.T) {
 	const (
-		receiver = "sqlquery/my-name"
+		receiver      = "sqlquery/my-name"
+		queryReceiver = "query-0: select * from simple_logs"
 	)
 	type testCase struct {
 		name       string
@@ -99,8 +97,8 @@ func TestMetrics(t *testing.T) {
 	}
 	tests := []testCase{
 		{
-			name:       "receiver/collected/log/records",
-			recordFunc: "RecordCollectedLogs",
+			name:       "receiver/accepted/log/records",
+			recordFunc: "RecordAcceptedLogs",
 			value:      10,
 		},
 	}
@@ -114,8 +112,8 @@ func TestMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		switch tt.recordFunc {
-		case "RecordCollectedLogs":
-			require.NoError(t, RecordCollectedLogs(tt.value, receiver))
+		case "RecordAcceptedLogs":
+			require.NoError(t, RecordAcceptedLogs(tt.value, receiver, queryReceiver))
 		}
 	}
 
@@ -143,9 +141,11 @@ func TestMetrics(t *testing.T) {
 			require.Len(t, d.TimeSeries, 1)
 			require.Len(t, d.TimeSeries[0].Points, 1)
 			assert.Equal(t, d.TimeSeries[0].Points[0].Value, tt.value)
-			require.Len(t, d.TimeSeries[0].LabelValues, 1)
+			require.Len(t, d.TimeSeries[0].LabelValues, 2)
 			require.True(t, d.TimeSeries[0].LabelValues[0].Present)
-			assert.Equal(t, d.TimeSeries[0].LabelValues[0].Value, receiver)
+			assert.Equal(t, d.TimeSeries[0].LabelValues[0].Value, queryReceiver)
+			require.True(t, d.TimeSeries[0].LabelValues[1].Present)
+			assert.Equal(t, d.TimeSeries[0].LabelValues[1].Value, receiver)
 		})
 	}
 }

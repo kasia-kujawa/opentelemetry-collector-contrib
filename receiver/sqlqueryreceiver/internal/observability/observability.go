@@ -24,7 +24,7 @@ import (
 
 func init() {
 	err := view.Register(
-		viewCollectedTotal,
+		viewAcceptedLogs,
 	)
 	if err != nil {
 		fmt.Printf("Failed to register sqlquery receiver's views: %v\n", err)
@@ -32,24 +32,26 @@ func init() {
 }
 
 var (
-	mLogsCollectedLogs = stats.Int64("receiver/collected/log/records", "Number of collected logs", "")
-	receiverKey, _     = tag.NewKey("receiver") // nolint:errcheck
+	mAcceptedLogs  = stats.Int64("receiver/accepted/log/records", "Number of log record pushed into the pipeline.", "")
+	receiverKey, _ = tag.NewKey("receiver") // nolint:errcheck
+	queryKey, _    = tag.NewKey("query")    // nolint:errcheck
 )
 
-var viewCollectedTotal = &view.View{
-	Name:        mLogsCollectedLogs.Name(),
-	Description: mLogsCollectedLogs.Description(),
-	Measure:     mLogsCollectedLogs,
-	TagKeys:     []tag.Key{receiverKey},
+var viewAcceptedLogs = &view.View{
+	Name:        mAcceptedLogs.Name(),
+	Description: mAcceptedLogs.Description(),
+	Measure:     mAcceptedLogs,
+	TagKeys:     []tag.Key{receiverKey, queryKey},
 	Aggregation: view.Sum(),
 }
 
-func RecordCollectedLogs(collectedLogs int64, receiver string) error {
+func RecordAcceptedLogs(acceptedLogs int64, receiver string, query string) error {
 	return stats.RecordWithTags(
 		context.Background(),
 		[]tag.Mutator{
 			tag.Insert(receiverKey, receiver),
+			tag.Insert(queryKey, query),
 		},
-		mLogsCollectedLogs.M(collectedLogs),
+		mAcceptedLogs.M(acceptedLogs),
 	)
 }
