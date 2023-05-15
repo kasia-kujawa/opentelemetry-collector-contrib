@@ -105,8 +105,8 @@ func TestMetrics(t *testing.T) {
 			labelsOrder: []string{"query", "receiver"},
 		},
 		{
-			name:       "receiver/error/count",
-			recordFunc: "RecordErrorCount",
+			name:       "receiver/errors",
+			recordFunc: "RecordErrors",
 			value:      1,
 			labels: map[string]string{
 				"receiver":   "sqlquery/my-logs",
@@ -128,10 +128,10 @@ func TestMetrics(t *testing.T) {
 		switch tt.recordFunc {
 		case "RecordAcceptedLogs":
 			require.NoError(t, RecordAcceptedLogs(tt.value, tt.labels["receiver"], tt.labels["query"]))
-		case "RecordErrorCount":
-			require.NoError(t, RecordErrorCount(tt.labels["error_type"], tt.labels["receiver"], tt.labels["query"]))
-		case "RecordNoErrorCount":
-			require.NoError(t, RecordNoErrorCount(tt.labels["error_type"], tt.labels["receiver"], tt.labels["query"]))
+		case "RecordErrors":
+			require.NoError(t, RecordErrors(tt.labels["error_type"], tt.labels["receiver"], tt.labels["query"]))
+		case "RecordNoErrors":
+			require.NoError(t, RecordNoErrors(tt.labels["error_type"], tt.labels["receiver"], tt.labels["query"]))
 		}
 	}
 

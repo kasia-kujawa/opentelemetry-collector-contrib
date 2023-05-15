@@ -39,7 +39,7 @@ const (
 
 var (
 	mAcceptedLogs = stats.Int64("receiver/accepted/log/records", "Number of log record pushed into the pipeline.", "")
-	mErrorCount   = stats.Int64("receiver/error/count", "Number of errors", "")
+	mErrorCount   = stats.Int64("receiver/errors", "Number of errors", "")
 
 	receiverKey, _  = tag.NewKey("receiver")   // nolint:errcheck
 	queryKey, _     = tag.NewKey("query")      // nolint:errcheck
@@ -73,7 +73,7 @@ func RecordAcceptedLogs(acceptedLogs int64, receiver string, query string) error
 	)
 }
 
-func RecordErrorCount(errorType string, receiver string, query string) error {
+func RecordErrors(errorType string, receiver string, query string) error {
 	return stats.RecordWithTags(
 		context.Background(),
 		[]tag.Mutator{
@@ -85,7 +85,7 @@ func RecordErrorCount(errorType string, receiver string, query string) error {
 	)
 }
 
-func RecordNoErrorCount(errorType string, receiver string, query string) error {
+func RecordNoErrors(errorType string, receiver string, query string) error {
 	return stats.RecordWithTags(
 		context.Background(),
 		[]tag.Mutator{
