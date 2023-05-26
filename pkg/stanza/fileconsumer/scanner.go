@@ -6,6 +6,7 @@ package fileconsumer // import "github.com/open-telemetry/opentelemetry-collecto
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 
 	stanzaerrors "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/errors"
@@ -31,6 +32,7 @@ func NewPositionalScanner(r io.Reader, maxLogSize int, startOffset int64, splitF
 
 	scanFunc := func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		advance, token, err = splitFunc(data, atEOF)
+		fmt.Println("advance: ", advance)
 		if (advance == 0 && token == nil && err == nil) && len(data) >= 2*maxLogSize {
 			// reference: https://pkg.go.dev/bufio#SplitFunc
 			// splitFunc returns (0, nil, nil) to signal the Scanner to read more data but the buffer is full.
@@ -40,6 +42,7 @@ func NewPositionalScanner(r io.Reader, maxLogSize int, startOffset int64, splitF
 			advance, token = maxLogSize, token[:maxLogSize]
 		}
 		ps.pos += int64(advance)
+		fmt.Println("ps.pos: ", ps.pos, " advance: ", advance)
 		return
 	}
 	ps.Scanner.Split(scanFunc)

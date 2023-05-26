@@ -247,7 +247,7 @@ func (m *Manager) clearCurrentFingerprints() {
 func (m *Manager) saveCurrent(readers []*Reader) {
 	// Add readers from the current, completed poll interval to the list of known files
 	m.knownFiles = append(m.knownFiles, readers...)
-
+	fmt.Println("Known files", m.knownFiles)
 	// Clear out old readers. They are sorted such that they are oldest first,
 	// so we can just find the first reader whose generation is less than our
 	// max, and keep every reader after that

@@ -33,6 +33,7 @@ type Reader struct {
 
 	Fingerprint    *Fingerprint
 	Offset         int64
+	readBytes      int64
 	generation     int
 	file           *os.File
 	FileAttributes *FileAttributes
@@ -53,11 +54,13 @@ func (r *Reader) offsetToEnd() error {
 		return fmt.Errorf("stat: %w", err)
 	}
 	r.Offset = info.Size()
+	fmt.Println("offsetToEnd", r.Offset)
 	return nil
 }
 
 // ReadToEnd will read until the end of the file
 func (r *Reader) ReadToEnd(ctx context.Context) {
+	fmt.Println("ReadToEnd 1: ", r.Offset)
 	if _, err := r.file.Seek(r.Offset, 0); err != nil {
 		r.Errorw("Failed to seek", zap.Error(err))
 		return
@@ -76,14 +79,15 @@ func (r *Reader) ReadToEnd(ctx context.Context) {
 		ok := scanner.Scan()
 		if !ok {
 			r.eof = true
+			fmt.Println("Scan is not OK", "offset", r.Offset)
 			if err := scanner.getError(); err != nil {
 				// If Scan returned an error then we are not guaranteed to be at the end of the file
 				r.eof = false
+				fmt.Println("scanner.getError()", err)
 				r.Errorw("Failed during scan", zap.Error(err))
 			}
 			break
 		}
-
 		token, err := r.encoding.Decode(scanner.Bytes())
 		if err != nil {
 			r.Errorw("decode: %w", zap.Error(err))
@@ -173,18 +177,43 @@ func (r *Reader) Close() {
 func (r *Reader) Read(dst []byte) (int, error) {
 	// Skip if fingerprint is already built
 	// or if fingerprint is behind Offset
+	//debug.PrintStack()
+	fmt.Println("Reader Read len(r.Fingerprint.FirstBytes)", len(r.Fingerprint.FirstBytes), " r.Offset: ", r.Offset, "r.readBytes", r.readBytes)
 	if len(r.Fingerprint.FirstBytes) == r.fingerprintSize || int(r.Offset) > len(r.Fingerprint.FirstBytes) {
-		return r.file.Read(dst)
+		n, err := r.file.Read(dst)
+		r.readBytes += int64(n)
+		fmt.Println("*****************************************************************")
+		//fmt.Println(string(dst[:n]))
+		fmt.Println("len 1", len(dst[:n]))
+		fmt.Println("*****************************************************************")
+		return n, err
 	}
-	n, err := r.file.Read(dst)
-	appendCount := min0(n, r.fingerprintSize-int(r.Offset))
-	// return for n == 0 or r.Offset >= r.fileInput.fingerprintSize
+
+	n, err := r.file.Read(dst) //w tym pliku nie ma tylu bytów!!!!!
+	fmt.Println("n: ", n, " r.fingerprintSize-int(r.readBytes): ", r.fingerprintSize-int(r.readBytes))
+	appendCount := min0(n, r.fingerprintSize-int(r.readBytes))
+	r.readBytes += int64(n)
+	fmt.Println("appendCount: s", appendCount)
+
 	if appendCount == 0 {
 		return n, err
 	}
 
-	// for appendCount==0, the following code would add `0` to fingerprint
+	// if int(r.readBytes) <= len(r.Fingerprint.FirstBytes) {
+	// 	fmt.Println("r.readBytes lower than Fingerprint.FirstBytes - we don't have something new to update")
+	// 	return n, err
+	// }
+
+	if int(r.Offset)+n <= len(r.Fingerprint.FirstBytes) {
+		fmt.Println("r.readBytes lower than Fingerprint.FirstBytes - we don't have something new to update")
+		return n, err
+	}
+	fmt.Println("*****************************************************************")
+	//fmt.Println(string(dst[:n]))
+	fmt.Println("len 3", len(dst[:n]))
+	fmt.Println("*****************************************************************")
 	r.Fingerprint.FirstBytes = append(r.Fingerprint.FirstBytes[:r.Offset], dst[:appendCount]...)
+	fmt.Println("new length of first bytes", len(r.Fingerprint.FirstBytes))
 	return n, err
 }
 

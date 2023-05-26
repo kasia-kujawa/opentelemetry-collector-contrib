@@ -5,6 +5,7 @@ package fileconsumer // import "github.com/open-telemetry/opentelemetry-collecto
 
 import (
 	"bufio"
+	"fmt"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 )
@@ -32,6 +33,7 @@ func (factory *multilineSplitterFactory) Build(maxLogSize int) (bufio.SplitFunc,
 		return nil, err
 	}
 	flusher := factory.Flusher.Build()
+	fmt.Println("factory.Multiline.Build")
 	splitter, err := factory.Multiline.Build(enc.Encoding, false, factory.PreserveLeadingWhitespaces, factory.PreserveTrailingWhitespaces, flusher, maxLogSize)
 	if err != nil {
 		return nil, err

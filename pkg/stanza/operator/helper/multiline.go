@@ -39,6 +39,7 @@ func (c MultilineConfig) Build(enc encoding.Encoding, flushAtEOF, preserveLeadin
 
 // getSplitFunc returns split function for bufio.Scanner basing on configured pattern
 func (c MultilineConfig) getSplitFunc(enc encoding.Encoding, flushAtEOF bool, force *Flusher, maxLogSize int, preserveLeadingWhitespaces, preserveTrailingWhitespaces bool) (bufio.SplitFunc, error) {
+	fmt.Println("getSplitFunc")
 	endPattern := c.LineEndPattern
 	startPattern := c.LineStartPattern
 
@@ -55,6 +56,7 @@ func (c MultilineConfig) getSplitFunc(enc encoding.Encoding, flushAtEOF bool, fo
 	case enc == encoding.Nop:
 		return SplitNone(maxLogSize), nil
 	case endPattern == "" && startPattern == "":
+		fmt.Println("NewNewlineSplitFunc")
 		splitFunc, err = NewNewlineSplitFunc(enc, flushAtEOF, getTrimFunc(preserveLeadingWhitespaces, preserveTrailingWhitespaces))
 
 		if err != nil {
@@ -65,12 +67,14 @@ func (c MultilineConfig) getSplitFunc(enc encoding.Encoding, flushAtEOF bool, fo
 		if err != nil {
 			return nil, fmt.Errorf("compile line end regex: %w", err)
 		}
+		fmt.Println("NewLineEndSplitFunc")
 		splitFunc = NewLineEndSplitFunc(re, flushAtEOF, getTrimFunc(preserveLeadingWhitespaces, preserveTrailingWhitespaces))
 	case startPattern != "":
 		re, err := regexp.Compile("(?m)" + c.LineStartPattern)
 		if err != nil {
 			return nil, fmt.Errorf("compile line start regex: %w", err)
 		}
+		fmt.Println("NewLineStartSplitFunc")
 		splitFunc = NewLineStartSplitFunc(re, flushAtEOF, getTrimFunc(preserveLeadingWhitespaces, preserveTrailingWhitespaces))
 	default:
 		return nil, fmt.Errorf("unreachable")
@@ -168,6 +172,7 @@ func NewLineEndSplitFunc(re *regexp.Regexp, flushAtEOF bool, trimFunc trimFunc) 
 // NewNewlineSplitFunc splits log lines by newline, just as bufio.ScanLines, but
 // never returning an token using EOF as a terminator
 func NewNewlineSplitFunc(enc encoding.Encoding, flushAtEOF bool, trimFunc trimFunc) (bufio.SplitFunc, error) {
+	fmt.Println("*** NewNewlineSplitFunc")
 	newline, err := encodedNewline(enc)
 	if err != nil {
 		return nil, err
@@ -175,11 +180,13 @@ func NewNewlineSplitFunc(enc encoding.Encoding, flushAtEOF bool, trimFunc trimFu
 
 	carriageReturn, err := encodedCarriageReturn(enc)
 	if err != nil {
+		fmt.Println("encodedCarriageReturn err")
 		return nil, err
 	}
 
 	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
+			fmt.Println("NewNewlineSplitFunc atEOF && len(data) == 0 ")
 			return 0, nil, nil
 		}
 

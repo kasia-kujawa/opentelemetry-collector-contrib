@@ -102,10 +102,11 @@ func (b *readerBuilder) build() (r *Reader, err error) {
 		headerSettings:  b.headerSettings,
 		HeaderFinalized: b.headerFinalized,
 	}
-
+	fmt.Println("build: offset", b.offset)
 	if b.splitFunc != nil {
 		r.lineSplitFunc = b.splitFunc
 	} else {
+		fmt.Println("using splitter factory Build")
 		r.lineSplitFunc, err = b.splitterFactory.Build(b.readerConfig.maxLogSize)
 		if err != nil {
 			return
