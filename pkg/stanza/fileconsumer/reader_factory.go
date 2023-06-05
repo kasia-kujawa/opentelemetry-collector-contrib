@@ -108,6 +108,7 @@ func (b *readerBuilder) withHeaderAttributes(attrs map[string]any) *readerBuilde
 }
 
 func (b *readerBuilder) build() (r *Reader, err error) {
+	fmt.Println("readerBuilder bufferSize:", b.bufferSize)
 	r = &Reader{
 		readerConfig:    b.readerConfig,
 		bufferSize:      b.bufferSize,
@@ -167,6 +168,7 @@ func (b *readerBuilder) build() (r *Reader, err error) {
 		r.Fingerprint = b.fp
 	} else if b.file != nil {
 		fp, err := b.readerFactory.newFingerprint(r.file)
+		fmt.Println("reader factory, build, fingerprint len", len(fp.FirstBytes))
 		if err != nil {
 			return nil, err
 		}

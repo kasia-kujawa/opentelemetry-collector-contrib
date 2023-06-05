@@ -45,6 +45,8 @@ type Reader struct {
 	headerSettings       *headerSettings
 	headerPipeline       pipeline.Pipeline
 	headerPipelineOutput *headerPipelineOutput
+
+	readBytes int
 }
 
 // offsetToEnd sets the starting offset
@@ -59,6 +61,7 @@ func (r *Reader) offsetToEnd() error {
 
 // ReadToEnd will read until the end of the file
 func (r *Reader) ReadToEnd(ctx context.Context) {
+	fmt.Println("reader 0 offset: ", r.Offset, "bufferSize", r.bufferSize)
 	if _, err := r.file.Seek(r.Offset, 0); err != nil {
 		r.Errorw("Failed to seek", zap.Error(err))
 		return
@@ -107,7 +110,9 @@ func (r *Reader) ReadToEnd(ctx context.Context) {
 		}
 
 		r.Offset = scanner.Pos()
+		//fmt.Println("offset: ", r.Offset, " token ", string(token))
 	}
+	fmt.Println("reader, ReadToEnd len of fingerprint size", len(r.Fingerprint.FirstBytes), " offset: ", r.Offset, "r", r.readBytes)
 }
 
 // consumeHeaderLine checks if the given token is a line of the header, and consumes it if it is.
@@ -174,16 +179,24 @@ func (r *Reader) Close() {
 func (r *Reader) Read(dst []byte) (int, error) {
 	// Skip if fingerprint is already built
 	// or if fingerprint is behind Offset
+	fmt.Println("Reader Read", " len(r.Fingerprint.FirstBytes): ", len(r.Fingerprint.FirstBytes), " offset: ", r.Offset, "read Bytes: ", r.readBytes)
 	if len(r.Fingerprint.FirstBytes) == r.fingerprintSize || int(r.Offset) > len(r.Fingerprint.FirstBytes) {
-		return r.file.Read(dst)
+		n, err := r.file.Read(dst)
+		r.readBytes += n
+		return n, err
 	}
 	n, err := r.file.Read(dst)
+
+	r.readBytes += n
 	appendCount := min0(n, r.fingerprintSize-int(r.Offset))
+	fmt.Println("####################################################")
+	fmt.Println(string(dst[:appendCount]))
+	fmt.Println("####################################################")
 	// return for n == 0 or r.Offset >= r.fileInput.fingerprintSize
 	if appendCount == 0 {
 		return n, err
 	}
-
+	fmt.Println("Read before update of finger print size", "readBytes: ", r.readBytes, " offset ", r.Offset, " appendCount ", appendCount)
 	// for appendCount==0, the following code would add `0` to fingerprint
 	r.Fingerprint.FirstBytes = append(r.Fingerprint.FirstBytes[:r.Offset], dst[:appendCount]...)
 	return n, err

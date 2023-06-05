@@ -33,6 +33,10 @@ func NewFingerprint(file *os.File, size int) (*Fingerprint, error) {
 		FirstBytes: buf[:n],
 	}
 
+	// fmt.Println("*****************Initial fingerprint size*************")
+	// fmt.Println(string(fp.FirstBytes))
+	// fmt.Println("******************************************************")
+
 	return fp, nil
 }
 
@@ -58,7 +62,15 @@ func (f Fingerprint) StartsWith(old *Fingerprint) bool {
 	}
 	l1 := len(f.FirstBytes)
 	if l0 > l1 {
+		fmt.Println("StartsWith old finger fingerprint size higher than older")
 		return false
 	}
+	fmt.Println("old first bytes", len(old.FirstBytes))
+	fmt.Println("************************************************")
+	fmt.Println(string(old.FirstBytes[:l0]))
+	fmt.Println("************************************************")
+	fmt.Println("new first bytes", len(f.FirstBytes))
+	fmt.Println(string(f.FirstBytes[:l0]))
+	fmt.Println("************************************************")
 	return bytes.Equal(old.FirstBytes[:l0], f.FirstBytes[:l0])
 }

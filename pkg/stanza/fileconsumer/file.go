@@ -202,6 +202,7 @@ func (m *Manager) makeReader(path string) *Reader {
 	}
 
 	fp, err := m.readerFactory.newFingerprint(file)
+	fmt.Println("makeReader, fingerprint len", len(fp.FirstBytes))
 	if err != nil {
 		m.Errorw("Failed creating fingerprint", zap.Error(err))
 		return nil
@@ -226,8 +227,8 @@ func (m *Manager) makeReader(path string) *Reader {
 			return nil
 		}
 	}
-
 	m.currentFps = append(m.currentFps, fp)
+	fmt.Println("len of m.currentFps", len(m.currentFps))
 	reader, err := m.newReader(file, fp)
 	if err != nil {
 		m.Errorw("Failed to create reader", zap.Error(err))
@@ -247,6 +248,7 @@ func (m *Manager) clearCurrentFingerprints() {
 func (m *Manager) saveCurrent(readers []*Reader) {
 	// Add readers from the current, completed poll interval to the list of known files
 	m.knownFiles = append(m.knownFiles, readers...)
+	fmt.Println("saveCurrent: known files: ", len(m.knownFiles))
 
 	// Clear out old readers. They are sorted such that they are oldest first,
 	// so we can just find the first reader whose generation is less than our
@@ -263,9 +265,11 @@ func (m *Manager) saveCurrent(readers []*Reader) {
 func (m *Manager) newReader(file *os.File, fp *Fingerprint) (*Reader, error) {
 	// Check if the new path has the same fingerprint as an old path
 	if oldReader, ok := m.findFingerprintMatch(fp); ok {
+		fmt.Println("newReader found fingerPrint Match")
 		return m.readerFactory.copy(oldReader, file)
 	}
 
+	fmt.Println("newReader creating new Reader")
 	// If we don't match any previously known files, create a new reader from scratch
 	return m.readerFactory.newReader(file, fp)
 }
@@ -275,12 +279,14 @@ func (m *Manager) findFingerprintMatch(fp *Fingerprint) (*Reader, bool) {
 	for i := len(m.knownFiles) - 1; i >= 0; i-- {
 		oldReader := m.knownFiles[i]
 		if fp.StartsWith(oldReader.Fingerprint) {
+			fmt.Println("findFingerprintMatch, startwith returns true")
 			// Remove the old reader from the list of known files. We will
 			// add it back in saveCurrent if it is still alive.
 			m.knownFiles = append(m.knownFiles[:i], m.knownFiles[i+1:]...)
 			return oldReader, true
 		}
 	}
+	fmt.Println("findFingerprintMatch didn't found match")
 	return nil, false
 }
 
@@ -347,6 +353,7 @@ func (m *Manager) loadLastPollFiles(ctx context.Context) error {
 			return err
 		}
 		m.knownFiles = append(m.knownFiles, unsafeReader)
+		fmt.Println("loadLastPollFiles, known files: ", len(m.knownFiles))
 	}
 
 	return nil
