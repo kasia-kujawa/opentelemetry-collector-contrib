@@ -36,13 +36,14 @@ func NewConfig() *Config {
 // NewConfigWithID creates a new recombine config with default values
 func NewConfigWithID(operatorID string) *Config {
 	return &Config{
-		TransformerConfig: helper.NewTransformerConfig(operatorID, operatorType),
-		MaxBatchSize:      1000,
-		MaxSources:        1000,
-		CombineWith:       defaultCombineWith,
-		OverwriteWith:     "newest",
-		ForceFlushTimeout: 5 * time.Second,
-		SourceIdentifier:  entry.NewAttributeField("file.path"),
+		TransformerConfig:     helper.NewTransformerConfig(operatorID, operatorType),
+		MaxBatchSize:          1000,
+		MaxUnmatchedBatchSize: 100,
+		MaxSources:            1000,
+		CombineWith:           defaultCombineWith,
+		OverwriteWith:         "newest",
+		ForceFlushTimeout:     5 * time.Second,
+		SourceIdentifier:      entry.NewAttributeField("file.path"),
 	}
 }
 
@@ -52,6 +53,7 @@ type Config struct {
 	IsFirstEntry             string          `mapstructure:"is_first_entry"`
 	IsLastEntry              string          `mapstructure:"is_last_entry"`
 	MaxBatchSize             int             `mapstructure:"max_batch_size"`
+	MaxUnmatchedBatchSize    int             `mapstructure:"max_unmatched_batch_size"`
 	CombineField             entry.Field     `mapstructure:"combine_field"`
 	CombineWith              string          `mapstructure:"combine_with"`
 	SourceIdentifier         entry.Field     `mapstructure:"source_identifier"`
@@ -107,13 +109,14 @@ func (c *Config) Build(logger *zap.SugaredLogger) (operator.Operator, error) {
 	}
 
 	return &Transformer{
-		TransformerOperator: transformer,
-		matchFirstLine:      matchesFirst,
-		prog:                prog,
-		maxBatchSize:        c.MaxBatchSize,
-		maxSources:          c.MaxSources,
-		overwriteWithOldest: overwriteWithOldest,
-		batchMap:            make(map[string]*sourceBatch),
+		TransformerOperator:   transformer,
+		matchFirstLine:        matchesFirst,
+		prog:                  prog,
+		maxBatchSize:          c.MaxBatchSize,
+		MaxUnmatchedBatchSize: c.MaxUnmatchedBatchSize,
+		maxSources:            c.MaxSources,
+		overwriteWithOldest:   overwriteWithOldest,
+		batchMap:              make(map[string]*sourceBatch),
 		batchPool: sync.Pool{
 			New: func() any {
 				return &sourceBatch{
@@ -135,17 +138,18 @@ func (c *Config) Build(logger *zap.SugaredLogger) (operator.Operator, error) {
 // into a single
 type Transformer struct {
 	helper.TransformerOperator
-	matchFirstLine      bool
-	prog                *vm.Program
-	maxBatchSize        int
-	maxSources          int
-	overwriteWithOldest bool
-	combineField        entry.Field
-	combineWith         string
-	ticker              *time.Ticker
-	forceFlushTimeout   time.Duration
-	chClose             chan struct{}
-	sourceIdentifier    entry.Field
+	matchFirstLine        bool
+	prog                  *vm.Program
+	maxBatchSize          int
+	MaxUnmatchedBatchSize int
+	maxSources            int
+	overwriteWithOldest   bool
+	combineField          entry.Field
+	combineWith           string
+	ticker                *time.Ticker
+	forceFlushTimeout     time.Duration
+	chClose               chan struct{}
+	sourceIdentifier      entry.Field
 
 	sync.Mutex
 	batchPool  sync.Pool
@@ -159,6 +163,7 @@ type sourceBatch struct {
 	numEntries             int
 	recombined             *bytes.Buffer
 	firstEntryObservedTime time.Time
+	matchDetected          bool
 }
 
 func (r *Transformer) Start(_ operator.Persister) error {
@@ -245,22 +250,22 @@ func (r *Transformer) Process(ctx context.Context, e *entry.Entry) error {
 		}
 
 		// Add the current log to the new batch
-		r.addToBatch(ctx, e, s)
+		r.addToBatch(ctx, e, s, matches)
 		return nil
 	// This is the last entry in a complete batch
 	case matches && !r.matchFirstLine:
-		r.addToBatch(ctx, e, s)
+		r.addToBatch(ctx, e, s, matches)
 		return r.flushSource(ctx, s)
 	}
 
 	// This is neither the first entry of a new log,
 	// nor the last entry of a log, so just add it to the batch
-	r.addToBatch(ctx, e, s)
+	r.addToBatch(ctx, e, s, matches)
 	return nil
 }
 
 // addToBatch adds the current entry to the current batch of entries that will be combined
-func (r *Transformer) addToBatch(ctx context.Context, e *entry.Entry, source string) {
+func (r *Transformer) addToBatch(ctx context.Context, e *entry.Entry, source string, matches bool) {
 	batch, ok := r.batchMap[source]
 	if !ok {
 		if len(r.batchMap) >= r.maxSources {
@@ -273,6 +278,11 @@ func (r *Transformer) addToBatch(ctx context.Context, e *entry.Entry, source str
 		if r.overwriteWithOldest {
 			batch.baseEntry = e
 		}
+	}
+
+	// mark that match occurred to use max_unmatched_batch_size only when match didn't occur
+	if matches && !batch.matchDetected {
+		batch.matchDetected = true
 	}
 
 	// Combine the combineField of each entry in the batch,
@@ -288,7 +298,9 @@ func (r *Transformer) addToBatch(ctx context.Context, e *entry.Entry, source str
 	}
 	batch.recombined.WriteString(s)
 
-	if (r.maxLogSize > 0 && int64(batch.recombined.Len()) > r.maxLogSize) || batch.numEntries >= r.maxBatchSize {
+	if (r.maxLogSize > 0 && int64(batch.recombined.Len()) > r.maxLogSize) ||
+		batch.numEntries >= r.maxBatchSize ||
+		(!batch.matchDetected && r.MaxUnmatchedBatchSize > 0 && batch.numEntries >= r.MaxUnmatchedBatchSize) {
 		if err := r.flushSource(ctx, source); err != nil {
 			r.Errorf("there was error flushing combined logs %s", err)
 		}
