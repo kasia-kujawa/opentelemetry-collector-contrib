@@ -6,6 +6,8 @@ package recombine // import "github.com/open-telemetry/opentelemetry-collector-c
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -36,9 +38,10 @@ type Transformer struct {
 	sourceIdentifier      entry.Field
 
 	sync.Mutex
-	batchPool  sync.Pool
-	batchMap   map[string]*sourceBatch
-	maxLogSize int64
+	batchPool       sync.Pool
+	batchMap        map[string]*sourceBatch
+	unMatchBatchMap map[string]bool
+	maxLogSize      int64
 }
 
 // sourceBatch contains the status info of a batch
@@ -48,6 +51,7 @@ type sourceBatch struct {
 	recombined             *bytes.Buffer
 	firstEntryObservedTime time.Time
 	matchDetected          bool
+	sync.Mutex
 }
 
 func (t *Transformer) Start(_ operator.Persister) error {
@@ -63,9 +67,11 @@ func (t *Transformer) flushLoop() {
 			timeNow := time.Now()
 			for source, batch := range t.batchMap {
 				timeSinceFirstEntry := timeNow.Sub(batch.firstEntryObservedTime)
+				fmt.Println("***DEBUG*** ", " source: ", source, "timeSinceFirstEntry: ", timeSinceFirstEntry, " batch.firstEntryObservedTime: ", batch.firstEntryObservedTime)
 				if timeSinceFirstEntry < t.forceFlushTimeout {
 					continue
 				}
+				fmt.Println("***DEBUG*** ", " source: ", source, "timeSinceFirstEntry > t.forceFlushTimeout ")
 				if err := t.flushSource(context.Background(), source); err != nil {
 					t.Errorf("there was error flushing combined logs %s", err)
 				}
@@ -111,8 +117,10 @@ func (t *Transformer) Process(ctx context.Context, e *entry.Entry) error {
 
 	// this is guaranteed to be a boolean because of expr.AsBool
 	matches := m.(bool)
+
 	var s string
 	err = e.Read(t.sourceIdentifier, &s)
+	fmt.Println("***DEBUG*** ", " source: ", s, " matches: ", matches, " body: ", e.Body)
 	if err != nil {
 		t.Warn("entry does not contain the source_identifier, so it may be pooled with other sources")
 		s = DefaultSourceIdentifier
@@ -135,6 +143,7 @@ func (t *Transformer) Process(ctx context.Context, e *entry.Entry) error {
 		return nil
 	// This is the last entry in a complete batch
 	case matches && !t.matchFirstLine:
+		fmt.Println("***DEBUG*** ", " source: ", s, "matches && !t.matchFirstLine")
 		t.addToBatch(ctx, e, s, matches)
 		return t.flushSource(ctx, s)
 	}
@@ -147,6 +156,7 @@ func (t *Transformer) Process(ctx context.Context, e *entry.Entry) error {
 
 // addToBatch adds the current entry to the current batch of entries that will be combined
 func (t *Transformer) addToBatch(ctx context.Context, e *entry.Entry, source string, matches bool) {
+	fmt.Println("***DEBUG*** ", " source: ", source, "addToBatch")
 	batch, ok := t.batchMap[source]
 	if !ok {
 		if len(t.batchMap) >= t.maxSources {
@@ -160,9 +170,11 @@ func (t *Transformer) addToBatch(ctx context.Context, e *entry.Entry, source str
 			batch.baseEntry = e
 		}
 	}
-
+	// batch.Lock()
+	// defer batch.Unlock()
 	// mark that match occurred to use max_unmatched_batch_size only when match didn't occur
 	if matches && !batch.matchDetected {
+		fmt.Println("***DEBUG*** ", " source: ", source, "match detected")
 		batch.matchDetected = true
 	}
 
@@ -182,6 +194,7 @@ func (t *Transformer) addToBatch(ctx context.Context, e *entry.Entry, source str
 	if (t.maxLogSize > 0 && int64(batch.recombined.Len()) > t.maxLogSize) ||
 		batch.numEntries >= t.maxBatchSize ||
 		(!batch.matchDetected && t.maxUnmatchedBatchSize > 0 && batch.numEntries >= t.maxUnmatchedBatchSize) {
+		fmt.Println("***DEBUG*** ", " source: ", source, "matches: ", matches, " batch.matchDetected: ", batch.matchDetected)
 		if err := t.flushSource(ctx, source); err != nil {
 			t.Errorf("there was error flushing combined logs %s", err)
 		}
@@ -204,6 +217,9 @@ func (t *Transformer) flushAllSources(ctx context.Context) {
 // flushSource combines the entries currently in the batch into a single entry,
 // then forwards them to the next operator in the pipeline
 func (t *Transformer) flushSource(ctx context.Context, source string) error {
+	fmt.Println("***DEBUG*** ", " source: ", source, " flushSource")
+	debug.PrintStack()
+	fmt.Println("*************************************************")
 	batch := t.batchMap[source]
 	// Skip flushing a combined log if the batch is empty
 	if batch == nil {
@@ -216,6 +232,7 @@ func (t *Transformer) flushSource(ctx context.Context, source string) error {
 	}
 
 	// Set the recombined field on the entry
+	fmt.Println("***DEBUG*** ", " source: ", source, " batch.recombined.String() ", batch.recombined.String())
 	err := batch.baseEntry.Set(t.combineField, batch.recombined.String())
 	if err != nil {
 		return err
@@ -239,6 +256,7 @@ func (t *Transformer) addNewBatch(source string, e *entry.Entry) *sourceBatch {
 
 // removeBatch removes the batch for the given source.
 func (t *Transformer) removeBatch(source string) {
+	fmt.Println("***DEBUG*** ", " source: ", source, "removeBatch")
 	batch := t.batchMap[source]
 	delete(t.batchMap, source)
 	t.batchPool.Put(batch)

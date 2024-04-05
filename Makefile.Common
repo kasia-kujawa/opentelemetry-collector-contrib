@@ -26,7 +26,7 @@ SRC_PARENT_DIR :=  $(shell dirname $(SRC_ROOT))
 # build tags required by any component should be defined as an independent variables and later added to GO_BUILD_TAGS below
 GO_BUILD_TAGS=""
 GOTEST_TIMEOUT?= 300s
-GOTEST_OPT?= -race -timeout $(GOTEST_TIMEOUT) -parallel 4 --tags=$(GO_BUILD_TAGS)
+GOTEST_OPT?=  -race -timeout $(GOTEST_TIMEOUT) -parallel 20 --tags=$(GO_BUILD_TAGS)
 GOTEST_INTEGRATION_OPT?= -race -timeout 360s -parallel 4
 GOTEST_OPT_WITH_COVERAGE = $(GOTEST_OPT) -coverprofile=coverage.txt -covermode=atomic
 GOTEST_OPT_WITH_INTEGRATION=$(GOTEST_INTEGRATION_OPT) -tags=integration,$(GO_BUILD_TAGS) -run=Integration
@@ -123,7 +123,8 @@ common: lint test
 
 .PHONY: test
 test: $(GOTESTSUM)
-	$(GOTESTSUM) $(GOTESTSUM_OPT) --packages="./..." -- $(GOTEST_OPT)
+	go clean -testcache
+	$(GOTESTSUM) $(GOTESTSUM_OPT) --format standard-verbose --packages="./operator/transformer/recombine" -- $(GOTEST_OPT)
 
 .PHONY: test-with-cover
 test-with-cover: $(GOTESTSUM)

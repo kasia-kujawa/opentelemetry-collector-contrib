@@ -582,12 +582,12 @@ func TestTransformer(t *testing.T) {
 				return cfg
 			}(),
 			[]*entry.Entry{
-				entryWithBody(t1, "test2"),
-				entryWithBody(t1, "test3"),
-				entryWithBody(t1, "test4"),
+				entryWithBodyAttr(t1, "test2", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=0"}),
+				entryWithBodyAttr(t1, "test3", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=0"}),
+				entryWithBodyAttr(t1, "test4", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=0"}),
 			},
 			[]*entry.Entry{
-				entryWithBody(t1, "test2\ntest3\ntest4"),
+				entryWithBodyAttr(t1, "test2\ntest3\ntest4", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=0"}),
 			},
 		},
 		{
@@ -601,14 +601,14 @@ func TestTransformer(t *testing.T) {
 				return cfg
 			}(),
 			[]*entry.Entry{
-				entryWithBody(t1, "test2"),
-				entryWithBody(t1, "test3"),
-				entryWithBody(t1, "test4"),
+				entryWithBodyAttr(t1, "test2", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=1"}),
+				entryWithBodyAttr(t1, "test3", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=1"}),
+				entryWithBodyAttr(t1, "test4", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=1"}),
 			},
 			[]*entry.Entry{
-				entryWithBody(t1, "test2"),
-				entryWithBody(t1, "test3"),
-				entryWithBody(t1, "test4"),
+				entryWithBodyAttr(t1, "test2", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=1"}),
+				entryWithBodyAttr(t1, "test3", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=1"}),
+				entryWithBodyAttr(t1, "test4", map[string]string{"file.path": "EntriesNonMatchingForLastEntryWithMaxUnmatchedBatchSize=1"}),
 			},
 		},
 		{
@@ -622,18 +622,18 @@ func TestTransformer(t *testing.T) {
 				return cfg
 			}(),
 			[]*entry.Entry{
-				entryWithBody(t1, "test2"),
-				entryWithBody(t1, "test3"),
-				entryWithBody(t1, "test4"),
-				entryWithBody(t1, "test1"),
-				entryWithBody(t1, "test5"),
-				entryWithBody(t1, "test6"),
-				entryWithBody(t1, "test1"),
+				entryWithBodyAttr(t1, "test2", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
+				entryWithBodyAttr(t1, "test3", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
+				entryWithBodyAttr(t1, "test4", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
+				entryWithBodyAttr(t1, "test1", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
+				entryWithBodyAttr(t1, "test5", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
+				entryWithBodyAttr(t1, "test6", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
+				entryWithBodyAttr(t1, "test1", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
 			},
 			[]*entry.Entry{
-				entryWithBody(t1, "test2\ntest3"),
-				entryWithBody(t1, "test4\ntest1"),
-				entryWithBody(t1, "test5\ntest6\ntest1"),
+				entryWithBodyAttr(t1, "test2\ntest3", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
+				entryWithBodyAttr(t1, "test4\ntest1", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
+				entryWithBodyAttr(t1, "test5\ntest6\ntest1", map[string]string{"file.path": "TestMaxUnmatchedBatchSizeForLastEntry"}),
 			},
 		},
 		{
@@ -647,20 +647,20 @@ func TestTransformer(t *testing.T) {
 				return cfg
 			}(),
 			[]*entry.Entry{
-				entryWithBody(t1, "test2"),
-				entryWithBody(t1, "test3"),
-				entryWithBody(t1, "test4"),
-				entryWithBody(t1, "test5"),
-				entryWithBody(t1, "test1"),
-				entryWithBody(t1, "test6"),
-				entryWithBody(t1, "test7"),
-				entryWithBody(t1, "test1"),
+				entryWithBodyAttr(t1, "test2", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test3", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test4", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test5", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test1", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test6", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test7", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test1", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
 			},
 			[]*entry.Entry{
-				entryWithBody(t1, "test2\ntest3"),
-				entryWithBody(t1, "test4\ntest5"),
-				entryWithBody(t1, "test1"),
-				entryWithBody(t1, "test6\ntest7\ntest1"),
+				entryWithBodyAttr(t1, "test2\ntest3", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test4\ntest5", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test1", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
+				entryWithBodyAttr(t1, "test6\ntest7\ntest1", map[string]string{"file.path": "EntriesMatchingForLastEntryAfterMaxUnmatchedBatchSize"}),
 			},
 		},
 	}
