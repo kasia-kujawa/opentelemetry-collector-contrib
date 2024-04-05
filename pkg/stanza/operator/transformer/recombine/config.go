@@ -115,6 +115,7 @@ func (c *Config) Build(logger *zap.SugaredLogger) (operator.Operator, error) {
 		maxSources:            c.MaxSources,
 		overwriteWithNewest:   overwriteWithNewest,
 		batchMap:              make(map[string]*sourceBatch),
+		matchMap:              make(map[string]bool),
 		batchPool: sync.Pool{
 			New: func() any {
 				return &sourceBatch{
