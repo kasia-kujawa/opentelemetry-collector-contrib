@@ -1,0 +1,33 @@
+receivers:
+  docker_stats:
+  hostmetrics:
+    scrapers:
+      processes:
+
+processors:
+  groupbyattrs:
+    keys:
+      - host.name
+  batch:
+
+exporters:
+  sql:
+  debug:
+  # https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    metrics:
+      receivers:
+        - hostmetrics
+      processors:
+        - batch
+      exporters:
+        - sql
+#        - debug
